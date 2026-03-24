@@ -2,7 +2,7 @@
 
 ![ADBZero Hero](https://img.shields.io/badge/ADB--Zero-Ultimate--Android--Suite-blueviolet?style=for-the-badge&logo=android)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-1.2.0-blue?style=for-the-badge)](https://github.com/your-repo/adbloater/releases)
+[![Version](https://img.shields.io/badge/Version-1.1.0-blue?style=for-the-badge)]
 [![WebUSB](https://img.shields.io/badge/WebUSB-Supported-green?style=for-the-badge&logo=google-chrome)](https://developer.mozilla.org/en-US/docs/Web/API/USB)
 
 **ADBZero** is a high-performance, browser-based Android management suite. No installation, no complicated drivers, and 100% client-side security. Control, debloat, and optimize your Android device directly from your Chrome, Edge, or Opera browser. Any Chromium-based browser is supported, including Brave, Zen, Vivaldi and others.
@@ -71,7 +71,7 @@ Available on **[www.adbzero.com](https://adbzero.com)**
 
 ## 🔒 Privacy & Security
 - **100% Client-Side**: All commands are executed in your browser. No device data or RSA keys are ever sent to our servers.
-- **No Installation**: No executable files mean no risk of local malware.
+- **Live terminal**: See all the commands executed and download a complete log file.
 
 ---
 
