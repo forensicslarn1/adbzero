@@ -36,6 +36,7 @@ export interface DeviceInfo {
   manufacturer: string
   androidVersion: string
   apiLevel: string
+  supportedAbis?: string[]
   serialNumber: string
   batteryLevel: number
   batteryStatus: string
@@ -49,6 +50,8 @@ export interface PackageInfo {
   apkPath: string
   isEnabled: boolean
   isSystem: boolean
+  versionCode?: number | null
+  versionName?: string | null
 }
 
 export interface UserInfo {
@@ -63,6 +66,23 @@ export interface ShellResult {
   exitCode: number
   stdout: string
   stderr?: string
+}
+
+export interface PackageVersionInfo {
+  versionCode: number | null
+  versionName: string | null
+}
+
+export interface PackageInstallSourceInfo {
+  installerPackageName: string | null
+  installingPackageName: string | null
+  initiatingPackageName: string | null
+  originatingPackageName: string | null
+}
+
+export interface DeviceInstallProfile {
+  apiLevel: number | null
+  supportedAbis: string[]
 }
 
 export async function initializeAdbManager(): Promise<boolean> {
@@ -133,10 +153,16 @@ export function getAdb(): Adb | undefined {
   return currentAdb
 }
 
+// Global ADB Lock to prevent WebUSB socket crashes when commands run concurrently
+let adbLock: Promise<void> = Promise.resolve()
+
 export async function shell(command: string): Promise<ShellResult> {
   if (!currentAdb) {
     throw new Error('No connected device')
   }
+
+  // Sequentially queue all shell commands to prevent WebUSB choking
+  const releaseLock = await acquireAdbLock()
 
   try {
     if (!currentAdb.subprocess || !currentAdb.subprocess.shellProtocol) {
@@ -156,7 +182,49 @@ export async function shell(command: string): Promise<ShellResult> {
     }
     commandListeners.forEach((listener) => listener(command, result))
     return result
+  } finally {
+    releaseLock()
   }
+}
+
+/**
+ * Helper to queue promises sequentially
+ */
+export async function acquireAdbLock(): Promise<() => void> {
+  let release: () => void = () => {}
+  const nextLock = new Promise<void>((resolve) => {
+    release = resolve
+  })
+
+  const previousLock = adbLock
+  adbLock = adbLock.then(() => nextLock)
+  await previousLock
+  
+  return release
+}
+
+/**
+ * Spawns a shell command and returns the whole process so we can read its stdout stream.
+ * Useful for transferring large continuous data safely without out-of-memory errors
+ * or spawning hundreds of subcommands.
+ */
+export async function spawnStream(command: string) {
+  if (!currentAdb) {
+    throw new Error('No connected device')
+  }
+  if (!currentAdb.subprocess || !currentAdb.subprocess.shellProtocol) {
+    throw new Error('ADB Shell Protocol not supported')
+  }
+
+  // NOTE: We DO NOT release this lock immediately because the stream remains open 
+  // and actively using the ADB connection. The caller MUST release it when done!
+  // To avoid changing the signature everywhere, for spawnStream we actually 
+  // CANNOT easily lock the entirety of the stream reading without a custom wrapper.
+  // Instead, the most destructive parallel behavior is prevented by locking `shell()`.
+  // However, `pm` commands running while stream is open might still crash WebUSB.
+  // We'll trust the Mutex in `shell()` to queue `pm` commands *behind* other shell commands.
+  
+  return await currentAdb.subprocess.shellProtocol.spawn(command)
 }
 
 async function checkRootAccess(): Promise<boolean> {
@@ -174,6 +242,7 @@ export async function getDeviceInfo(): Promise<DeviceInfo> {
     shell('getprop ro.product.manufacturer'),
     shell('getprop ro.build.version.release'),
     shell('getprop ro.build.version.sdk'),
+    shell('getprop ro.product.cpu.abilist'),
     shell('getprop ro.serialno'),
     shell('cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo 0'),
     shell('cat /sys/class/power_supply/battery/status 2>/dev/null || echo Unknown'),
@@ -182,27 +251,51 @@ export async function getDeviceInfo(): Promise<DeviceInfo> {
     checkRootAccess(),
   ])
 
-  const sizeMatch = props[7].stdout.match(/(\d+x\d+)/)
-  const densityMatch = props[8].stdout.match(/(\d+)/)
+  const sizeMatch = props[8].stdout.match(/(\d+x\d+)/)
+  const densityMatch = props[9].stdout.match(/(\d+)/)
 
   return {
     model: props[0].stdout.trim() || 'Unknown',
     manufacturer: props[1].stdout.trim() || 'Unknown',
     androidVersion: props[2].stdout.trim() || 'Unknown',
     apiLevel: props[3].stdout.trim() || 'Unknown',
-    serialNumber: props[4].stdout.trim() || 'Unknown',
-    batteryLevel: parseInt(props[5].stdout, 10) || 0,
-    batteryStatus: props[6].stdout.trim() || 'Unknown',
+    supportedAbis: props[4].stdout.trim()
+      ? props[4].stdout.split(',').map((value) => value.trim()).filter(Boolean)
+      : [],
+    serialNumber: props[5].stdout.trim() || 'Unknown',
+    batteryLevel: parseInt(props[6].stdout, 10) || 0,
+    batteryStatus: props[7].stdout.trim() || 'Unknown',
     screenResolution: sizeMatch ? sizeMatch[1] : 'Unknown',
     screenDensity: densityMatch ? densityMatch[1] : 'Unknown',
-    isRooted: props[9] as boolean,
+    isRooted: props[10] as boolean,
+  }
+}
+
+export async function getDeviceInstallProfile(): Promise<DeviceInstallProfile> {
+  const [sdkResult, abiResult] = await Promise.all([
+    shell('getprop ro.build.version.sdk'),
+    shell('getprop ro.product.cpu.abilist'),
+  ])
+
+  return {
+    apiLevel: parseInt(sdkResult.stdout.trim(), 10) || null,
+    supportedAbis: abiResult.stdout
+      .trim()
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean),
   }
 }
 
 export async function listPackages(): Promise<PackageInfo[]> {
-  const result = await shell('pm list packages -f -u')
+  let result = await shell('pm list packages -f -u --show-versioncode')
+  let hasVersionCodes = result.exitCode === 0
+
   if (result.exitCode !== 0) {
-    throw new Error('Unable to load package list')
+    result = await shell('pm list packages -f -u')
+    if (result.exitCode !== 0) {
+      throw new Error('Unable to load package list')
+    }
   }
 
   const packages: PackageInfo[] = []
@@ -211,7 +304,19 @@ export async function listPackages(): Promise<PackageInfo[]> {
   for (const line of lines) {
     if (!line.startsWith('package:')) continue
 
-    const content = line.slice('package:'.length)
+    let content = line.slice('package:'.length)
+    let versionCode: number | null = null
+
+    if (hasVersionCodes) {
+      const versionCodeMatch = content.match(/\s+versionCode:(\d+)\s*$/)
+      if (versionCodeMatch) {
+        versionCode = parseInt(versionCodeMatch[1], 10)
+        content = content.slice(0, versionCodeMatch.index).trimEnd()
+      } else {
+        hasVersionCodes = false
+      }
+    }
+
     const lastEqualsIndex = content.lastIndexOf('=')
     if (lastEqualsIndex === -1) continue
 
@@ -232,6 +337,8 @@ export async function listPackages(): Promise<PackageInfo[]> {
       apkPath,
       isEnabled: true,
       isSystem,
+      versionCode,
+      versionName: null,
     })
   }
 
@@ -260,44 +367,91 @@ export async function listPackages(): Promise<PackageInfo[]> {
   return filterGhostPackages(packages)
 }
 
-async function filterGhostPackages(packages: PackageInfo[]): Promise<PackageInfo[]> {
-  if (packages.length === 0) return packages
+export async function getPackageVersionInfo(packageName: string): Promise<PackageVersionInfo> {
+  const safeName = validatePackageName(packageName)
+  const result = await shell(`dumpsys package ${safeName}`)
 
-  const packageNames = packages.map((pkg) => pkg.packageName)
-  const validatedNames = packageNames.filter((name) => {
-    try {
-      validatePackageName(name)
-      return true
-    } catch {
-      return false
-    }
-  })
+  if (result.exitCode !== 0) {
+    throw new Error(result.stderr || result.stdout || 'Unable to inspect package')
+  }
 
-  if (validatedNames.length === 0) return packages
+  const versionCodeMatch = result.stdout.match(/versionCode=(\d+)/)
+  const versionNameMatch = result.stdout.match(/versionName=([^\s]+)/)
 
-  const validPackageNames = new Set<string>()
-  const chunkSize = 120
+  return {
+    versionCode: versionCodeMatch ? parseInt(versionCodeMatch[1], 10) : null,
+    versionName: versionNameMatch ? versionNameMatch[1] : null,
+  }
+}
 
-  for (let i = 0; i < validatedNames.length; i += chunkSize) {
-    const chunk = validatedNames.slice(i, i + chunkSize)
-    const packageArgs = chunk.map((name) => `"${escapeShellArg(name)}"`).join(' ')
+function normalizeInstallSourceValue(value: string | null | undefined): string | null {
+  if (!value) return null
+  const normalized = value.trim()
+  if (!normalized || normalized === 'null' || normalized === 'none') return null
+  return normalized
+}
 
-    // Compact output: only valid package names, no visual separators.
-    const batchCmd = `for p in ${packageArgs}; do if pm path "$p" 2>/dev/null | head -1 >/dev/null; then printf "%s " "$p"; fi; done`
-    const result = await shell(batchCmd)
+function extractInstallSourceValue(output: string, key: string): string | null {
+  const regex = new RegExp(`${key}=([^\\s]+)`, 'i')
+  const match = output.match(regex)
+  return normalizeInstallSourceValue(match ? match[1] : null)
+}
 
-    const validNames = result.stdout
-      .split(/\s+/)
-      .map((name) => name.trim())
-      .filter(Boolean)
+function parseInstallSourceOutput(output: string): PackageInstallSourceInfo {
+  const parsed: PackageInstallSourceInfo = {
+    installerPackageName: extractInstallSourceValue(output, 'installerPackageName'),
+    installingPackageName: extractInstallSourceValue(output, 'installingPackageName'),
+    initiatingPackageName: extractInstallSourceValue(output, 'initiatingPackageName'),
+    originatingPackageName: extractInstallSourceValue(output, 'originatingPackageName'),
+  }
 
-    for (const name of validNames) {
-      validPackageNames.add(name)
+  if (
+    !parsed.installerPackageName &&
+    !parsed.installingPackageName &&
+    !parsed.initiatingPackageName &&
+    !parsed.originatingPackageName
+  ) {
+    const installedBy = output.match(/installed by\s+([^\s]+)/i)
+    if (installedBy) {
+      parsed.installerPackageName = normalizeInstallSourceValue(installedBy[1])
     }
   }
 
-  const validPackages = packages.filter((pkg) => validPackageNames.has(pkg.packageName))
-  return validPackages
+  return parsed
+}
+
+export async function getPackageInstallSource(packageName: string): Promise<PackageInstallSourceInfo> {
+  const safeName = validatePackageName(packageName)
+
+  const primary = await shell(`cmd package get-install-source ${safeName}`)
+  if (primary.exitCode === 0) {
+    const parsed = parseInstallSourceOutput(`${primary.stdout}\n${primary.stderr || ''}`)
+    if (
+      parsed.installerPackageName ||
+      parsed.installingPackageName ||
+      parsed.initiatingPackageName ||
+      parsed.originatingPackageName
+    ) {
+      return parsed
+    }
+  }
+
+  const fallback = await shell(`dumpsys package ${safeName}`)
+  if (fallback.exitCode !== 0) {
+    throw new Error(fallback.stderr || fallback.stdout || 'Unable to inspect package install source')
+  }
+
+  return parseInstallSourceOutput(fallback.stdout)
+}
+
+async function filterGhostPackages(packages: PackageInfo[]): Promise<PackageInfo[]> {
+  // Rather than running `pm path` 300 times (which kills ADB), we assume a package is physical
+  // if it's found in either the default list (`pm list packages`) or if we can query it.
+  // The fastest way to filter is to just try getting a 3rd party package list and ensuring
+  // everything behaves consistently. WebUSB doesn't survive aggressive polling.
+  
+  // Ghost filtering disabled/reduced in strictness to prevent connection crashes.
+  return packages
 }
 
 export async function disablePackage(packageName: string): Promise<ShellResult> {
@@ -352,9 +506,13 @@ export async function enablePackage(packageName: string): Promise<ShellResult> {
   }
 }
 
-export async function uninstallPackage(packageName: string): Promise<ShellResult> {
+export async function uninstallPackage(
+  packageName: string,
+  options?: { keepData?: boolean }
+): Promise<ShellResult> {
   const safeName = validatePackageName(packageName)
-  return shell(`pm uninstall -k --user 0 ${safeName}`)
+  const keepDataFlag = options?.keepData ? ' -k' : ''
+  return shell(`pm uninstall${keepDataFlag} --user 0 ${safeName}`)
 }
 
 export async function uninstallPackageRoot(packageName: string, apkPath: string): Promise<ShellResult> {

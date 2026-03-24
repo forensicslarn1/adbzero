@@ -12,7 +12,7 @@
  * using app_metadata.role = 'admin'. This env-based fallback is for
  * development/initial setup only.
  */
-const ADMIN_UIDS_ENV = import.meta.env.VITE_ADMIN_UIDS || ''
+const ADMIN_UIDS_ENV = import.meta.env.DEV ? (import.meta.env.VITE_ADMIN_UIDS || '') : ''
 export const ADMIN_UIDS: string[] = ADMIN_UIDS_ENV
   ? ADMIN_UIDS_ENV.split(',').map((uid: string) => uid.trim()).filter(Boolean)
   : []
@@ -23,13 +23,13 @@ export const ADMIN_UIDS: string[] = ADMIN_UIDS_ENV
  */
 export function isAdmin(userId: string | null | undefined): boolean {
   if (!userId) return false
-  return ADMIN_UIDS.includes(userId)
+  return import.meta.env.DEV && ADMIN_UIDS.includes(userId)
 }
 
 /**
- * Versione dell'app
+ * Versione dell'app - Tratta automaticamente da package.json via Vite
  */
-export const APP_VERSION = '1.0.0'
+export const APP_VERSION = import.meta.env.PACKAGE_VERSION || '1.1.0'
 
 /**
  * Nome dell'app
@@ -39,27 +39,27 @@ export const APP_NAME = 'ADBZero'
 /**
  * URL repository GitHub
  */
-export const GITHUB_URL = ''
+export const GITHUB_URL = 'https://github.com/ADBZero/adbzero'
 
 /**
  * URL canale Telegram
  */
-export const TELEGRAM_URL = ''
+export const TELEGRAM_URL = 'https://t.me/adbzero'
 
 /**
  * URL profilo X (Twitter)
  */
-export const TWITTER_URL = ''
+export const TWITTER_URL = 'https://x.com/standardbus'
 
 /**
  * URL profilo Bluesky
  */
-export const BLUESKY_URL = ''
+export const BLUESKY_URL = 'https://bsky.app/profile/hoxen.bsky.social'
 
 /**
  * URL community Reddit
  */
-export const REDDIT_URL = ''
+export const REDDIT_URL = 'https://www.reddit.com/user/StandardBus/'
 
 /**
  * Timeout per i comandi ADB (ms)

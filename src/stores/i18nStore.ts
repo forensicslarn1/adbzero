@@ -15,6 +15,7 @@ import {
   type SupportedLanguage,
   type TranslationKeys,
 } from '@/locales'
+import { APP_VERSION } from '@/config/app'
 
 // Helper type to get nested keys
 type NestedKeyOf<T> = T extends object
@@ -173,9 +174,12 @@ export const useI18nStore = create<I18nState>()(
           return key
         }
 
+        // Merge params with global version
+        const combinedParams = { version: APP_VERSION, ...params }
+
         // Handle interpolation only for strings
-        if (params && typeof translation === 'string') {
-          Object.entries(params).forEach(([paramKey, value]) => {
+        if (typeof translation === 'string') {
+          Object.entries(combinedParams).forEach(([paramKey, value]) => {
             translation = (translation as string).replace(
               new RegExp(`\\{${paramKey}\\}`, 'g'),
               String(value)

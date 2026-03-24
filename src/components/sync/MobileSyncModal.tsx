@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Smartphone, SmartphoneIcon, Terminal } from 'lucide-react'
 import { useAdbStore } from '@/stores/adbStore'
 import { useAdb } from '@/hooks/useAdb'
+import { useAuthStore } from '@/stores/authStore'
 import { useTranslation } from '@/stores/i18nStore'
 import { markMobileAuditExecuted } from '@/services/supabase'
 
@@ -21,6 +22,7 @@ export function MobileSyncModal() {
     } = useAdbStore()
 
     const { togglePackage } = useAdb()
+    const user = useAuthStore((state) => state.user)
     const { t } = useTranslation()
     const [isProcessing, setIsProcessing] = useState(false)
     const [currentPkg, setCurrentPkg] = useState('')
@@ -46,7 +48,9 @@ export function MobileSyncModal() {
         }
 
         // Mark as executed in DB
-        await markMobileAuditExecuted(currentMobileAudit.id)
+        if (user?.id) {
+            await markMobileAuditExecuted(user.id, currentMobileAudit.id)
+        }
 
         setIsProcessing(false)
         handleClose()

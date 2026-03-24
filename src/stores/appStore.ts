@@ -6,7 +6,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type Page = 'connect' | 'dashboard' | 'debloater' | 'debloat-lists' | 'degoogle' | 'privacy' | 'root-tools' | 'history' | 'settings' | 'setup' | 'device-tools' | 'screen-mirror' | 'desktop' | 'shizuku' | 'admin-analytics' | 'apk-installer' | 'app-cloner'
+export type Page = 'connect' | 'dashboard' | 'debloater' | 'debloat-lists' | 'degoogle' | 'privacy' | 'root-tools' | 'history' | 'settings' | 'setup' | 'device-tools' | 'screen-mirror' | 'desktop' | 'shizuku' | 'admin-analytics' | 'store' | 'app-cloner' | 'file-manager'
 export type Theme = 'light' | 'dark'
 
 interface ToastData {
@@ -66,9 +66,11 @@ export const useAppStore = create<AppState>()(
         const id = crypto.randomUUID()
         const newToast = { ...toast, id }
 
-        set((state) => ({
-          toasts: [...state.toasts, newToast]
-        }))
+        set((state) => {
+          // Keep at most 20 toasts to prevent unbounded growth
+          const existing = state.toasts.length >= 20 ? state.toasts.slice(-19) : state.toasts
+          return { toasts: [...existing, newToast] }
+        })
 
         // Auto dismiss
         const duration = toast.duration ?? 4000

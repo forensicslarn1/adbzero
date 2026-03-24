@@ -94,8 +94,8 @@ export function AuthModal() {
           setError(t('auth.passwordsDontMatch'))
           return
         }
-        if (password.length < 6) {
-          setError(t('auth.passwordTooShort'))
+        if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{10,128}$/.test(password)) {
+          setError('Password must be 10+ characters and include uppercase, lowercase, and a number')
           return
         }
         await signup(email, password, nickname)
@@ -301,7 +301,7 @@ export function AuthModal() {
                   onChange={(e) => setPassword(e.target.value)}
                   icon={<Lock className="w-4 h-4" strokeWidth={1.5} />}
                   required
-                  minLength={6}
+                  minLength={10}
                 />
               )}
 

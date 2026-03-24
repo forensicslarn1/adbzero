@@ -12,7 +12,7 @@ import {
   Package,
   RefreshCw,
   ArrowRight,
-  Zap,
+  Download,
   Shield,
   Leaf,
   Monitor,
@@ -155,12 +155,12 @@ export function DashboardPage() {
         bgColor: 'bg-amber-500/10'
       },
       {
-        title: t('nav.rootTools'),
-        description: t('dashboard.rootToolsDesc'),
-        icon: Zap,
-        page: 'root-tools',
-        color: 'text-red-500',
-        bgColor: 'bg-red-500/10'
+        title: t('nav.store'),
+        description: t('dashboard.appStoreDesc'),
+        icon: Download,
+        page: 'store',
+        color: 'text-cyan-500',
+        bgColor: 'bg-cyan-500/10'
       }
     ]
 

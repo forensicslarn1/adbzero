@@ -9,6 +9,7 @@
 import * as adbClient from './adb-client'
 import { supabase } from './supabase'
 import { getAppSettings } from '@/config/app'
+import { getRepoIconForPackage } from './store-icon-bridge'
 
 // ============================================
 // INDEXEDDB CACHE
@@ -117,7 +118,18 @@ export async function getAppIcon(packageName: string): Promise<string | null> {
     return cached
   }
 
-  // 3. Prova a estrarre dal dispositivo
+  // 3. Try F-Droid repo icon (fast — uses store-icon-cache IndexedDB)
+  try {
+    const repoIcon = await getRepoIconForPackage(packageName)
+    if (repoIcon) {
+      iconMemoryCache.set(packageName, repoIcon)
+      return repoIcon
+    }
+  } catch {
+    // best-effort
+  }
+
+  // 4. Prova a estrarre dal dispositivo (slow — ADB shell)
   try {
     const iconData = await extractIconFromDevice(packageName)
     if (iconData) {
@@ -294,14 +306,14 @@ export function getCachedIcon(packageName: string): string | null {
  * Precarica le icone per una lista di pacchetti
  * Carica solo quelle non in cache
  */
-export async function preloadIcons(packageNames: string[], maxConcurrent = 3): Promise<void> {
+export async function preloadIcons(packageNames: string[], maxConcurrent = 6): Promise<void> {
   // Filtra pacchetti già in cache o già falliti
   const toLoad = packageNames.filter(
     pkg => !iconMemoryCache.has(pkg) && !iconNotFound.has(pkg)
   )
 
-  // Limita per performance
-  const limitedLoad = toLoad.slice(0, 30)
+  // Increased limit: 100 icons per batch (repo icons are fast)
+  const limitedLoad = toLoad.slice(0, 100)
 
   // Carica in batch paralleli
   for (let i = 0; i < limitedLoad.length; i += maxConcurrent) {

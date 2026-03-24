@@ -29,7 +29,8 @@ import {
   Zap,
   BarChart3,
   Download,
-  Copy
+  Copy,
+  FolderOpen
 } from 'lucide-react'
 import { useAppStore, type Page } from '@/stores/appStore'
 import { useAdbStore } from '@/stores/adbStore'
@@ -57,7 +58,8 @@ const navItems: NavItem[] = [
   { id: 'privacy', labelKey: 'nav.privacy', icon: Shield },
   { id: 'root-tools', labelKey: 'nav.rootTools', icon: Wrench },
   { id: 'shizuku', labelKey: 'nav.shizuku', icon: Zap },
-  { id: 'apk-installer', labelKey: 'nav.apkInstaller', icon: Download },
+  { id: 'store', labelKey: 'nav.store', icon: Download },
+  { id: 'file-manager', labelKey: 'nav.fileManager', icon: FolderOpen },
   { id: 'app-cloner', labelKey: 'nav.appCloner', icon: Copy },
   { id: 'admin-analytics', labelKey: 'nav.analytics', icon: BarChart3, requiresAuth: true },
   { id: 'history', labelKey: 'nav.history', icon: History, requiresAuth: true },

@@ -72,8 +72,8 @@ export function DegooglePage() {
     if (selectedLevel) {
       const levelConfig = DEGOOGLE_LEVELS.find(l => l.id === selectedLevel)
       if (levelConfig) {
-        const installed = packages.map(p => p.packageName)
-        const toSelect = levelConfig.packages.filter(p => installed.includes(p))
+        const enabledNames = packages.filter(p => p.isEnabled).map(p => p.packageName)
+        const toSelect = levelConfig.packages.filter(p => enabledNames.includes(p))
         setSelectedPackages(new Set(toSelect))
       }
     }
@@ -86,8 +86,8 @@ export function DegooglePage() {
     const levelConfig = DEGOOGLE_LEVELS.find(l => l.id === selectedLevel)
     if (!levelConfig) return []
 
-    const installedPackageNames = packages.map(p => p.packageName)
-    return levelConfig.packages.filter(pkg => installedPackageNames.includes(pkg))
+    const enabledPackageNames = packages.filter(p => p.isEnabled).map(p => p.packageName)
+    return levelConfig.packages.filter(pkg => enabledPackageNames.includes(pkg))
   }, [selectedLevel, packages])
 
   // Load package database for descriptions
@@ -346,7 +346,7 @@ export function DegooglePage() {
 
             {DEGOOGLE_LEVELS.map((level) => {
               const installedCount = packages.filter(p =>
-                level.packages.includes(p.packageName)
+                p.isEnabled && level.packages.includes(p.packageName)
               ).length
 
               return (

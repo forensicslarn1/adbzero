@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { Layout } from '@/components/layout/Layout'
 import { ConnectPage } from '@/pages/ConnectPage'
@@ -28,9 +29,10 @@ const ScreenMirrorPage = lazy(() => import('@/pages/ScreenMirrorPage').then(m =>
 const DesktopPage = lazy(() => import('@/pages/DesktopPage').then(m => ({ default: m.DesktopPage })))
 const ShizukuPage = lazy(() => import('@/pages/ShizukuPage').then(m => ({ default: m.ShizukuPage })))
 const AdminAnalyticsPage = lazy(() => import('@/pages/AdminAnalyticsPage').then(m => ({ default: m.AdminAnalyticsPage })))
-const ApkInstallerPage = lazy(() => import('@/pages/ApkInstallerPage').then(m => ({ default: m.ApkInstallerPage })))
+const StorePage = lazy(() => import('@/pages/StorePage').then(m => ({ default: m.StorePage })))
 const CommunityListsPage = lazy(() => import('@/pages/CommunityListsPage').then(m => ({ default: m.CommunityListsPage })))
 const AppClonerPage = lazy(() => import('@/pages/AppClonerPage').then(m => ({ default: m.AppClonerPage })))
+const FileManagerPage = lazy(() => import('@/pages/FileManagerPage').then(m => ({ default: m.FileManagerPage })))
 
 function PageLoader() {
   return (
@@ -43,6 +45,8 @@ function PageLoader() {
 function App() {
   const currentPage = useAppStore((state) => state.currentPage)
   const isConnected = useAdbStore((state) => state.isConnected)
+  const isDemoMode = useAdbStore((state) => state.isDemoMode)
+  const navigate = useNavigate()
 
   // Sincronizza automaticamente il database UAD all'avvio e ogni 24h
   useUadSync()
@@ -55,13 +59,15 @@ function App() {
     useAuthStore.getState().initialize()
   }, [])
 
-  // Redirect to connect page if not connected (except for setup page)
+  // Redirect to CMS homepage if not connected (except for setup page)
+  // This ensures users always see the mobile-friendly CmsPublicLayout header
+  // instead of the bare app shell without navigation
   useEffect(() => {
-    const allowedWithoutConnection = ['connect', 'setup']
-    if (!isConnected && !allowedWithoutConnection.includes(currentPage)) {
-      useAppStore.getState().setCurrentPage('connect')
+    const allowedWithoutConnection = ['setup']
+    if (!isConnected && !isDemoMode && !allowedWithoutConnection.includes(currentPage)) {
+      navigate('/', { replace: true })
     }
-  }, [isConnected, currentPage])
+  }, [isConnected, isDemoMode, currentPage, navigate])
 
   const renderPage = () => {
     switch (currentPage) {
@@ -91,7 +97,7 @@ function App() {
         return <DesktopPage key="desktop" />
       case 'shizuku':
         return <ShizukuPage key="shizuku" />
-      case 'admin-analytics':
+      case 'admin-analytics': {
         // Ulteriore controllo di sicurezza lato client
         const authState = useAuthStore.getState()
         if (!authState.isAdmin) {
@@ -99,19 +105,22 @@ function App() {
           return <ConnectPage key="connect" />
         }
         return <AdminAnalyticsPage key="admin-analytics" />
-      case 'apk-installer':
-        return <ApkInstallerPage key="apk-installer" />
+      }
+      case 'store':
+        return <StorePage key="store" />
       case 'debloat-lists':
         return <CommunityListsPage key="debloat-lists" />
       case 'app-cloner':
         return <AppClonerPage key="app-cloner" />
+      case 'file-manager':
+        return <FileManagerPage key="file-manager" />
       default:
         return <ConnectPage key="connect" />
     }
   }
 
-  // Show sidebar when connected OR on setup page
-  const showSidebar = isConnected || currentPage === 'setup'
+  // Show sidebar when connected, in demo mode, or on setup page
+  const showSidebar = isConnected || isDemoMode || currentPage === 'setup'
 
   // No-scroll pages (Screen Mirror, Desktop)
   const noScroll = currentPage === 'screen-mirror' || currentPage === 'desktop'

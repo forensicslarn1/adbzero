@@ -1,7 +1,7 @@
 {
   "name": "adbzero",
   "private": true,
-  "version": "1.0.8",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,6 +10,9 @@
     "build:app": "npm run validate:cms-i18n && tsc -b && vite build",
     "build:cms-prerender": "node scripts/prerender-cms.mjs",
     "build:prod": "npm run build:app && npm run build:cms-prerender",
+    "deploy:store": "node scripts/deploy-store.mjs",
+    "deploy:store:dry-run": "node scripts/deploy-store.mjs --dry-run",
+    "sync:store": "node scripts/store-sync-worker.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

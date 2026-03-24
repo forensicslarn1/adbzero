@@ -18,7 +18,7 @@ const ITEMS: CoverItem[] = [
     { id: 4, titleKey: 'nav.privacy', icon: Zap, color: 'from-yellow-500 to-orange-500', image: '' },
     { id: 5, titleKey: 'nav.deviceTools', icon: Cpu, color: 'from-emerald-500 to-teal-500', image: '' },
     { id: 6, titleKey: 'common.appName', icon: Terminal, color: 'from-slate-700 to-slate-900', image: '' },
-    { id: 7, titleKey: 'nav.apkInstaller', icon: Layers, color: 'from-indigo-500 to-blue-500', image: '' },
+    { id: 7, titleKey: 'nav.store', icon: Layers, color: 'from-indigo-500 to-blue-500', image: '' },
     { id: 8, titleKey: 'common.search', icon: Search, color: 'from-rose-500 to-pink-500', image: '' },
 ]
 

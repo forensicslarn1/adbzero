@@ -2,13 +2,57 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import packageJson from './package.json'
 
 export default defineConfig({
+  define: {
+    'import.meta.env.PACKAGE_VERSION': JSON.stringify(packageJson.version)
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['adbzero_logo.webp', 'favicon.svg'],
+      workbox: {
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, url }) => (
+              request.destination === 'image' &&
+              url.protocol.startsWith('https')
+            ),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'adbzero-store-media-v1',
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              expiration: {
+                maxEntries: 800,
+                maxAgeSeconds: 60 * 60 * 24 * 14,
+              },
+            },
+          },
+          {
+            urlPattern: ({ request, url }) => (
+              request.method === 'GET' &&
+              url.protocol === 'https:' &&
+              url.pathname.toLowerCase().endsWith('.apk')
+            ),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'adbzero-store-apk-runtime-v1',
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+              expiration: {
+                maxEntries: 48,
+                maxAgeSeconds: 60 * 60 * 24 * 7,
+              },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'ADBZero',
         short_name: 'ADBZero',

@@ -25,8 +25,16 @@ function getRequestIp(req: Request): string {
   )
 }
 
+function sweepExpiredBuckets(): void {
+  const now = Date.now()
+  for (const [k, v] of rateLimitBuckets) {
+    if (now >= v.resetAt) rateLimitBuckets.delete(k)
+  }
+}
+
 function isRateLimited(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()
+  if (rateLimitBuckets.size > 500) sweepExpiredBuckets()
   const bucket = rateLimitBuckets.get(key)
   if (!bucket || now >= bucket.resetAt) {
     rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs })
@@ -36,7 +44,6 @@ function isRateLimited(key: string, limit: number, windowMs: number): boolean {
     return true
   }
   bucket.count += 1
-  rateLimitBuckets.set(key, bucket)
   return false
 }
 
@@ -109,6 +116,7 @@ serve(async (req) => {
   }
 
   const authHeader = req.headers.get('authorization') ?? ''
+  const token = authHeader.replace(/^Bearer\s+/i, '')
   const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false, autoRefreshToken: false }
@@ -119,7 +127,7 @@ serve(async (req) => {
     return jsonResponse(origin, 403, { error: 'Admin privileges required' })
   }
 
-  const { data: userData } = await userClient.auth.getUser()
+  const { data: userData } = await userClient.auth.getUser(token)
   const rateLimitKey = userData.user?.id || getRequestIp(req)
   if (isRateLimited(rateLimitKey, RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_MS)) {
     return jsonResponse(origin, 429, { error: 'Too many requests' })

@@ -47,7 +47,7 @@ export function validatePackageName(packageName: string): string {
  * - Path traversal beyond allowed roots
  * - Null bytes
  */
-const DANGEROUS_PATH_CHARS = /[;|&$`(){}<>!~\x00\n\r]/
+const DANGEROUS_PATH_CHARS = /[;|&$`\x00\n\r]/
 
 const ALLOWED_PATH_PREFIXES = [
     '/data/local/tmp/',
@@ -105,6 +105,30 @@ export function validateFilePath(path: string, allowedPrefixes?: string[]): stri
     }
 
     return normalizedPath
+}
+
+/**
+ * Validates a file or folder name (single path segment).
+ * Blocks separators, null bytes and special directory names.
+ */
+const FILE_NAME_REGEX = /^[^/\x00\r\n]{1,255}$/
+
+export function validateFileName(name: string): string {
+    const trimmed = name.trim()
+
+    if (!trimmed) {
+        throw new Error('File name cannot be empty')
+    }
+
+    if (trimmed === '.' || trimmed === '..') {
+        throw new Error('Invalid file name')
+    }
+
+    if (!FILE_NAME_REGEX.test(trimmed)) {
+        throw new Error(`Invalid file name: "${trimmed}"`)
+    }
+
+    return trimmed
 }
 
 // ============================================
@@ -290,6 +314,46 @@ export function validateAppOp(op: string): string {
 
     if (!APPOPS_REGEX.test(trimmed)) {
         throw new Error(`Invalid appops operation: "${trimmed}"`)
+    }
+
+    return trimmed
+}
+
+// ============================================
+// FILE PERMISSION VALIDATION
+// ============================================
+
+/**
+ * Valid chmod patterns: 644, 755, 0644, 2755, etc.
+ */
+const CHMOD_MODE_REGEX = /^[0-7]{3,4}$/
+
+export function validateChmodMode(modeBits: string): string {
+    const trimmed = modeBits.trim()
+
+    if (!CHMOD_MODE_REGEX.test(trimmed)) {
+        throw new Error(`Invalid chmod mode: "${trimmed}"`)
+    }
+
+    return trimmed
+}
+
+/**
+ * Valid owner[:group] patterns for chown.
+ * Supports names or numeric IDs.
+ */
+const OWNER_NAME = '[a-zA-Z_][a-zA-Z0-9_-]{0,31}|[0-9]{1,10}'
+const CHOWN_OWNER_REGEX = new RegExp(`^(?:${OWNER_NAME})(?::(?:${OWNER_NAME}))?$`)
+
+export function validateOwnerGroup(owner: string): string {
+    const trimmed = owner.trim()
+
+    if (!trimmed) {
+        throw new Error('Owner cannot be empty')
+    }
+
+    if (!CHOWN_OWNER_REGEX.test(trimmed)) {
+        throw new Error(`Invalid owner/group format: "${trimmed}"`)
     }
 
     return trimmed

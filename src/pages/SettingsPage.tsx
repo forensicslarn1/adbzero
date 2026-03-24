@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/Button'
 import { Switch } from '@/components/ui/Switch'
 import { syncUadToSupabase } from '@/services/package-database'
 import { getUserDevices, disassociateDevice, type DeviceUserAssociation } from '@/services/device-auth'
-import { isAdmin, getAppSettings, saveAppSettings, type AppSettings } from '@/config/app'
+import { getAppSettings, saveAppSettings, type AppSettings } from '@/config/app'
 
 const container = {
   hidden: { opacity: 0 },
@@ -53,11 +53,8 @@ export function SettingsPage() {
   const showToast = useAppStore((state) => state.showToast)
   const clearLogs = useAdbStore((state) => state.clearLogs)
   const commandLogs = useAdbStore((state) => state.commandLogs)
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, isAdmin: userIsAdmin } = useAuthStore()
   const { t, language, setLanguage, supportedLanguages, languageNames, languageFlags } = useTranslation()
-
-  // Check if user is admin
-  const userIsAdmin = isAdmin(user?.id)
 
   const [isSyncingToSupabase, setIsSyncingToSupabase] = useState(false)
   const [copiedLogId, setCopiedLogId] = useState<string | null>(null)

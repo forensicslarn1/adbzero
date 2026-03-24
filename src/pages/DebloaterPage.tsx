@@ -65,7 +65,7 @@ import {
   createDebloatList
 } from '@/services/supabase'
 import { downloadCsv, generatePackagesCsv, parseDebloatCsv, type CsvRow } from '@/services/csv-service'
-import { isAdmin, getAppSettings } from '@/config/app'
+import { getAppSettings } from '@/config/app'
 
 // Tipi di ordinamento disponibili
 export type SortBy = 'name' | 'package' | 'status' | 'risk' | 'category'
@@ -98,13 +98,10 @@ export type ListDisplayMode = 'full' | 'compact'
 export function DebloaterPage() {
   const { packages, packagesLoading, loadPackages, togglePackage, uninstallRoot, deviceInfo } = useAdb()
   const setCurrentPage = useAppStore((state) => state.setCurrentPage)
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, isAdmin: userIsAdmin } = useAuthStore()
   const currentDeviceId = useAdbStore((state) => state.currentDeviceId)
   const { returnedPackages, setSystemUpdateDetected, setHasShownUpdateModal } = useAdbStore()
   const { t } = useTranslation()
-
-  // Check if user is admin
-  const userIsAdmin = isAdmin(user?.id)
 
   const [search, setSearch] = useState('')
   const [filters, setFilters] = useState<FilterState>(defaultFilters)

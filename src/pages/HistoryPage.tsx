@@ -28,7 +28,7 @@ import { useAdb } from '@/hooks/useAdb'
 import type { UserAction } from '@/services/supabase'
 import { useTranslation } from '@/stores/i18nStore'
 
-type ActionFilter = 'all' | 'disable' | 'enable' | 'uninstall' | 'reinstall'
+type ActionFilter = 'all' | 'disable' | 'enable' | 'uninstall' | 'reinstall' | 'file'
 
 export function HistoryPage() {
   const { user, isAuthenticated, loadUserData, userActions, userDevices } = useAuthStore()
@@ -57,6 +57,9 @@ export function HistoryPage() {
   // Filter actions
   const filteredActions = useMemo(() => {
     return userActions.filter(action => {
+      if (filter === 'file') {
+        return action.action.startsWith('file_')
+      }
       if (filter !== 'all' && action.action !== filter) return false
       if (selectedDevice && action.device_id !== selectedDevice) return false
       return true
@@ -192,7 +195,8 @@ export function HistoryPage() {
     disable: t('history.disables'),
     enable: t('history.enables'),
     uninstall: t('history.uninstalls'),
-    reinstall: t('history.reinstalls')
+    reinstall: t('history.reinstalls'),
+    file: t('history.fileActions')
   }
 
   if (!isAuthenticated) {
@@ -489,12 +493,15 @@ export function HistoryPage() {
               <div className="space-y-2 ml-7 border-l-2 border-surface-200 dark:border-white/10 pl-6">
                 {actions.map((action) => {
                   const device = userDevices.find(d => d.id === action.device_id)
-                  const ActionIcon = action.action === 'disable' || action.action === 'uninstall'
+                  const isFileAction = action.action.startsWith('file_')
+                  const ActionIcon = isFileAction ? Package : (action.action === 'disable' || action.action === 'uninstall'
                     ? XCircle
-                    : CheckCircle2
-                  const actionColor = action.action === 'disable' || action.action === 'uninstall'
-                    ? 'text-red-500 bg-red-500/10'
-                    : 'text-emerald-500 bg-emerald-500/10'
+                    : CheckCircle2)
+                  const actionColor = isFileAction 
+                    ? 'text-blue-500 bg-blue-500/10'
+                    : (action.action === 'disable' || action.action === 'uninstall'
+                      ? 'text-red-500 bg-red-500/10'
+                      : 'text-emerald-500 bg-emerald-500/10')
 
                   return (
                     <div
@@ -513,7 +520,16 @@ export function HistoryPage() {
                           <p className="font-medium text-surface-900 dark:text-white">
                             {action.action === 'disable' ? t('history.disabled') :
                               action.action === 'enable' ? t('history.enabled') :
-                                action.action === 'uninstall' ? t('history.uninstalled') : t('history.reinstalled')}
+                                action.action === 'uninstall' ? t('history.uninstalled') :
+                                  action.action === 'reinstall' ? t('history.reinstalled') :
+                                    action.action === 'file_delete' ? t('history.fileDeleted') :
+                                      action.action === 'file_rename' ? t('history.fileRenamed') :
+                                        action.action === 'file_move' ? t('history.fileMoved') :
+                                          action.action === 'file_copy' ? t('history.fileCopied') :
+                                            action.action === 'file_mkdir' ? t('history.dirCreated') :
+                                              action.action === 'file_chmod' ? t('history.chmodExecuted') :
+                                                action.action === 'file_chown' ? t('history.chownExecuted') :
+                                                  t('history.fileUploaded')}
                           </p>
                           <span className="text-xs text-surface-400">
                             {new Date(action.created_at).toLocaleTimeString(language, {

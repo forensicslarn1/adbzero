@@ -35,8 +35,16 @@ function getRequestIp(req: Request): string {
   )
 }
 
+function sweepExpiredBuckets(): void {
+  const now = Date.now()
+  for (const [k, v] of rateLimitBuckets) {
+    if (now >= v.resetAt) rateLimitBuckets.delete(k)
+  }
+}
+
 function isRateLimited(key: string, limit: number, windowMs: number): boolean {
   const now = Date.now()
+  if (rateLimitBuckets.size > 500) sweepExpiredBuckets()
   const bucket = rateLimitBuckets.get(key)
   if (!bucket || now >= bucket.resetAt) {
     rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs })
@@ -46,7 +54,6 @@ function isRateLimited(key: string, limit: number, windowMs: number): boolean {
     return true
   }
   bucket.count += 1
-  rateLimitBuckets.set(key, bucket)
   return false
 }
 
@@ -115,6 +122,7 @@ serve(async (req) => {
   }
 
   const authHeader = req.headers.get('authorization') ?? ''
+  const token = authHeader.replace(/^Bearer\s+/i, '')
   let payloadRaw: unknown
   try {
     payloadRaw = await req.json()
@@ -138,7 +146,7 @@ serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false }
   })
 
-  const { data: userData } = await userClient.auth.getUser()
+  const { data: userData } = await userClient.auth.getUser(token)
   const user = userData.user
   const { data: isAdminData } = await userClient.rpc('is_admin')
   const isAdmin = Boolean(isAdminData)
