@@ -29,6 +29,7 @@
     "@tiptap/extension-youtube": "^3.20.0",
     "@tiptap/react": "^3.20.0",
     "@tiptap/starter-kit": "^3.20.0",
+    "@vercel/analytics": "^2.0.1",
     "@yume-chan/adb": "^2.5.1",
     "@yume-chan/adb-credential-web": "^2.1.0",
     "@yume-chan/adb-daemon-webusb": "^2.3.2",
