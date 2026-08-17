@@ -77,7 +77,7 @@ export function Layout({ children, showSidebar = false, noScroll = false }: Layo
           </button>
           <div className="ml-3 flex items-center gap-2">
             <img
-              src="/adbzero_logo.webp"
+              src="/logo.webp"
               alt="ADBZero"
               className="w-8 h-8 rounded-lg object-cover border border-surface-200/70 dark:border-white/10 shadow-sm"
             />
