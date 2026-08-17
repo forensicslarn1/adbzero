@@ -12,7 +12,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['adbzero_logo.webp', 'favicon.svg'],
+      includeAssets: ['logo.webp', 'favicon.svg'],
       workbox: {
         cleanupOutdatedCaches: true,
         runtimeCaching: [
@@ -62,12 +62,12 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: 'adbzero_logo.webp',
+            src: 'logo.webp',
             sizes: '192x192',
             type: 'image/webp'
           },
           {
-            src: 'adbzero_logo.webp',
+            src: 'logo.webp',
             sizes: '512x512',
             type: 'image/webp'
           }
