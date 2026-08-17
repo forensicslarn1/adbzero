@@ -55,7 +55,7 @@ export function HomePage() {
     return content?.translation?.seo_keywords || imageKeywords
   }, [content?.translation?.seo_keywords])
   const ogImage = useMemo(
-    () => toAbsolutePublicUrl(CONNECT_CAROUSEL_IMAGES[0]?.src || '/adbzero_logo.webp'),
+    () => toAbsolutePublicUrl(CONNECT_CAROUSEL_IMAGES[0]?.src || '/logo.webp'),
     []
   )
   const jsonLd = useMemo(() => {
