@@ -122,7 +122,7 @@ export function ConnectLanding({ mode, template }: ConnectLandingProps) {
           transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
           className="w-24 h-24 mx-auto mb-8 rounded-[2rem] bg-white/90 dark:bg-surface-900/80 border border-surface-200 dark:border-white/10 flex items-center justify-center shadow-2xl shadow-accent-500/20 relative group p-2"
         >
-          <img src="/adbzero_logo.webp" alt={t('common.appName')} className="w-full h-full object-cover rounded-[1.25rem] relative z-10" />
+          <img src="/logo.webp" alt={t('common.appName')} className="w-full h-full object-cover rounded-[1.25rem] relative z-10" />
           <div className="absolute inset-0 bg-accent-500 blur-2xl opacity-10 group-hover:opacity-25 transition-opacity" />
         </motion.div>
 
