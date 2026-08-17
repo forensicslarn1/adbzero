@@ -101,7 +101,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <div className="p-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl overflow-hidden border border-surface-200/70 dark:border-white/10 shadow-lg shadow-accent-500/20">
-              <img src="/adbzero_logo.webp" alt={t('common.appName')} className="w-full h-full object-cover" />
+              <img src="/logo.webp" alt={t('common.appName')} className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="font-semibold text-surface-900 dark:text-white tracking-tight">
