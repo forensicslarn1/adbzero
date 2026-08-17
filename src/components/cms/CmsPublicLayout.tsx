@@ -44,7 +44,7 @@ export function CmsPublicLayout({ children }: CmsPublicLayoutProps) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2.5 font-black text-lg tracking-tight min-w-0">
             <img
-              src="/adbzero_logo.webp"
+              src="/logo.webp"
               alt={t('common.appName')}
               className="w-8 h-8 rounded-lg object-cover border border-surface-200/70 dark:border-white/10 shadow-sm"
             />
